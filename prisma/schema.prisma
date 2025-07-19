@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  externalId    String         @unique
+  email         String         @unique
+  password      String?
+  name          String         @unique @db.VarChar(60)
+  image         String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  deletedAt     DateTime?      @map("delete_at")
+  subscriptions Subscription[]
+  favorites     Favorite[]
+  history       History[]
+  payments      Payment[]
+  reviews       Review[]
+  watchlist     Watchlist[]
+
+  @@map("users")
+}
+
+model Subscription {
+  id        Int                @id @default(autoincrement())
+  userId    Int                @map("user_id")
+  startDate DateTime?
+  type      String
+  endDate   DateTime?
+  status    SubscriptionStatus
+  user      User               @relation(fields: [userId], references: [id])
+  payments  Payment[]
+}
+
+model Media {
+  id           Int         @id @default(autoincrement())
+  title        String
+  description  String?
+  type         MediaType   @default(MOVIE)
+  releaseYear  Int?
+  firstAirYear Int?
+  seasons      Int?
+  duration     Int?
+  posterUrl    String?
+  trailerUrl   String?
+  videoUrl     String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  deletedAt    DateTime?   @map("delete_at")
+  genreId      Int         @map("genre_id")
+  
+  favorites    Favorite[]
+  history      History[]
+  genre        Genre       @relation(fields: [genreId], references: [id])
+  reviews      Review[]
+  watchlist    Watchlist[]
+
+  @@map("media")
+}
+
+model Genre {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  movies    Media[]
+
+  @@map("genres")
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  mediaId   Int      @map("media_id")
+  rating    Int      @db.SmallInt
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  media     Media    @relation(fields: [mediaId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("reviews")
+}
+
+model Watchlist {
+  id      Int      @id @default(autoincrement())
+  userId  Int      @map("user_id")
+  mediaId Int      @map("media_id")
+  addedAt DateTime @default(now()) @map("added_at")
+  media   Media    @relation(fields: [mediaId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, mediaId])
+  @@map("watchlists")
+}
+
+model Favorite {
+  id      Int      @id @default(autoincrement())
+  userId  Int      @map("user_id")
+  mediaId Int      @map("media_id")
+  addedAt DateTime @default(now()) @map("added_at")
+  media   Media    @relation(fields: [mediaId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, mediaId])
+  @@map("favorites")
+}
+
+model History {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  mediaId   Int      @map("media_id")
+  watchedAt DateTime @default(now()) @map("watched_at")
+  media     Media    @relation(fields: [mediaId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("history")
+}
+
+model Payment {
+  id             Int            @id @default(autoincrement())
+  userId         Int            @map("user_id")
+  subscriptionId Int?           @map("subscription_id")
+  paymentGateway PaymentGateway
+  amount         Float
+  currency       String
+  paymentStatus  PaymentStatus
+  transactionId  String
+  paymentDate    DateTime       @default(now()) @map("payment_date")
+  subscription   Subscription?  @relation(fields: [subscriptionId], references: [id])
+  user           User           @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum MediaType {
+  MOVIE
+  TV
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PaymentGateway {
+  CHAPA
+  STRIPE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
